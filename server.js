@@ -5,6 +5,10 @@ var sys = require("sys"),
     http = require("http"),
     phantom = require('node-phantom');
 
+var hostname = process.env['FPF_HOSTNAME'] || '127.0.0.1';
+var port =     process.env['FPF_PORT'] || '26000';
+port = parseInt(port);
+
 var baseUrl = process.argv[process.argv.length - 1];
 var timeOut = 10000;
 var phantomOptions = {
@@ -42,6 +46,6 @@ var serverHandler = function(request, response) {
 };
 
 var server = http.createServer(serverHandler);
-server.listen(6000);
+server.listen(port, hostname);
+sys.puts("Server running at http://"+hostname+":"+port+"/");
 
-sys.puts("Server running at http://localhost:6000/");
