@@ -4,12 +4,17 @@ var sys = require("util"),
     http = require("http"),
     phantom = require('node-phantom');
 
-var hostname = process.env['FPF_HOSTNAME'] || '127.0.0.1';
-var port =     process.env['FPF_PORT'] || '26000';
-port = parseInt(port);
+
+function getParam(env_name) { return process.env[env_name]; }
+function getIntParam(env_name) { return process.env[env_name] ? parseInt(process.env[env_name]) : undefined; }
+
+var hostname =   getParam('FPF_HOSTNAME') || '127.0.0.1';
+var port =    getIntParam('FPF_PORT') || '26000';
+var timeOut = getIntParam('FPF_TIMEOUT_MS') || '10000';
+
+
 
 var baseUrl = process.argv[process.argv.length - 1];
-var timeOut = 10000;
 var phantomOptions = {
   parameters: {
     'load-images': 'no',
