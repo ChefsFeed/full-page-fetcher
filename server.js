@@ -1,6 +1,5 @@
-var sys = require("sys"),
+var sys = require("util"),
     url = require("url"),
-    util = require("util"),
     path = require("path"),
     http = require("http"),
     phantom = require('node-phantom');
