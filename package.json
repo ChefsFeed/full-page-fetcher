@@ -1,0 +1,18 @@
+{
+  "name": "full-page-fetcher",
+  "description": "Fetches pages from JS based apps, waits for render to happen, and then returns.",
+  "version": "0.0.2",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/lucasefe/full-page-fetcher.git"
+  },
+  "dependencies": {
+    "phantom": "*",
+    "node-phantom": "*"
+  },
+  "devDependencies": {},
+  "optionalDependencies": {},
+  "engines": {
+    "node": "*"
+  }
+}

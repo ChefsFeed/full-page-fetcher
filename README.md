@@ -7,6 +7,11 @@ Disclaimer: Total work in progress.
 
 Requirements: Node, PhantomJS.
 
+Usage:
+
+1. npm install (installs requirements)
+2. node server.js
+
 TODO:
 
 * Handle errors
