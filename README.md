@@ -11,7 +11,7 @@ Usage:
 
 1. npm install (installs node requirements)
 2. install PhantomJS (depends on OS)
-3. node server.js
+3. node server.js (see code for configuration options)
 
 TODO:
 
