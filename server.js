@@ -31,8 +31,14 @@ var renderHtml = function(url, cb) {
         console.log(logLine);
       };
       page.open(url, function(err, status){
+        //on errors, stop here
+        if (err) return cb(err);
+
         setTimeout(function() {
-          page.get('content',function(err,content){ cb(content) });
+          if (err)
+            cb(err);
+          else
+            page.get('content',function(err,content){ cb(null, content) });
         }, timeOut);
       });
     });
@@ -42,11 +48,26 @@ var renderHtml = function(url, cb) {
 var serverHandler = function(request, response) {
   var page = url.parse(request.url, true).pathname;
   var targetUrl = url.resolve(baseUrl, page);
-  sys.puts("fetching: " + targetUrl);
-  response.writeHead(200, {"Content-Type": "text/html"});
-  renderHtml(targetUrl, function(html) {
-    response.write(html);
-    response.end();
+
+  sys.puts("---- fetching: " + targetUrl);
+
+  renderHtml(targetUrl, function(err, html) {
+    if (err) {
+      //hide it under the carpet
+      //response.writeHead(500, {"Content-Type": "text/html"});
+      //response.write(err);
+      //response.end();
+
+      //fail noisily
+      sys.puts(" **** ERROR: "+err);
+      //bail; it is assumed this script runs under supervision and is automatically restarted
+      return exit(1);
+    }
+    else {
+      response.writeHead(200, {"Content-Type": "text/html"});
+      response.write(html);
+      response.end();
+    }
   });
 };
 
