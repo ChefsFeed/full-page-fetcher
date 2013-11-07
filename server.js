@@ -25,7 +25,10 @@ var renderHtml = function(url, cb) {
   phantom.create(function(err, ph) {
     ph.createPage(function(err, page){
       page.onConsoleMessage = function(msg, lineNum, sourceId) {
-        console.log('CONSOLE: ' + msg + ' (from line #' + lineNum + ' in "' + sourceId + '")');
+        var logLine = 'CONSOLE: ' + msg;
+        if (lineNum)
+          logLine += ' (from line #' + lineNum + ' in "' + sourceId + '")';
+        console.log(logLine);
       };
       page.open(url, function(err, status){
         setTimeout(function() {
