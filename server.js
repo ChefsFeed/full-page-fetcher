@@ -9,8 +9,8 @@ function getParam(env_name) { return process.env[env_name]; }
 function getIntParam(env_name) { return process.env[env_name] ? parseInt(process.env[env_name]) : undefined; }
 
 var hostname =   getParam('FPF_HOSTNAME') || '127.0.0.1';
-var port =    getIntParam('FPF_PORT') || '26000';
-var timeOut = getIntParam('FPF_TIMEOUT_MS') || '10000';
+var port =    getIntParam('FPF_PORT') || 26000;
+var timeOut = getIntParam('FPF_TIMEOUT_MS') || 10000;
 var baseUrl =    getParam('FPF_BASE_URL') || 'http://www.google.com/';
 
 
