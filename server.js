@@ -22,10 +22,14 @@ var phantomOptions = {
 }
 
 var renderHtml = function(url, cb) {
-  phantom.create(function(err, ph) {
+  phantom.create(function(err, phantomInstance) {
+    var ph = phantomInstance;
     ph.createPage(function(err, page){
       page.onConsoleMessage = function(msg, lineNum, sourceId) {
-        console.log('CONSOLE: ' + msg + ' (from line #' + lineNum + ' in "' + sourceId + '")');
+        var logLine = 'CONSOLE: ' + msg;
+        if (lineNum)
+          logLine += ' (from line #' + lineNum + ' in "' + sourceId + '")';
+        console.log(logLine);
       };
       page.open(url, function(err, status){
         setTimeout(function() {
@@ -39,7 +43,9 @@ var renderHtml = function(url, cb) {
 var serverHandler = function(request, response) {
   var page = url.parse(request.url, true).pathname;
   var targetUrl = url.resolve(baseUrl, page);
-  sys.puts("fetching: " + targetUrl);
+
+  sys.puts("---- fetching: " + targetUrl);
+
   response.writeHead(200, {"Content-Type": "text/html"});
   renderHtml(targetUrl, function(html) {
     response.write(html);
