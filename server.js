@@ -112,7 +112,6 @@ function cacheStore(urlPath, html, cb) {
   filepath = locationFor(urlPath);
 
   mkdir_p_for_file(filepath, function(err) {
-    console.log(err);
     if (err) return cb(err);
 
     log('cache: storing '+filepath);
