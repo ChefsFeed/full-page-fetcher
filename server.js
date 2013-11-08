@@ -21,16 +21,18 @@ var phantomOptions = {
   }
 }
 
+var logConsoleMessage = function(msg, lineNum, sourceId) {
+  var logLine = 'CONSOLE: ' + msg;
+  if (lineNum)
+    logLine += ' (from line #' + lineNum + ' in "' + sourceId + '")';
+  console.log(logLine);
+};
+
 var renderHtml = function(url, cb) {
   phantom.create(function(err, phantomInstance) {
     var ph = phantomInstance;
     ph.createPage(function(err, page){
-      page.onConsoleMessage = function(msg, lineNum, sourceId) {
-        var logLine = 'CONSOLE: ' + msg;
-        if (lineNum)
-          logLine += ' (from line #' + lineNum + ' in "' + sourceId + '")';
-        console.log(logLine);
-      };
+      page.onConsoleMessage = logConsoleMessage;
       page.open(url, function(err, status){
         setTimeout(function() {
           page.get('content',function(err,content){ cb(content) });
