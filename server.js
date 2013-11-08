@@ -114,10 +114,16 @@ function serve(html, response, cb) {
   if (cb) return cb();
 }
 
-function serveWithCache(urlPath, absoluteUrl, response, cb) {
+function serveWithCache(urlPath, absoluteUrl, realUrl, response, cb) {
+  var mustKillCache = realUrl.indexOf('kill_cache=true') > 0;
+
   cacheLookup(urlPath, function(err, html) {
-    if (! html) {
-      log("cache miss: "+absoluteUrl);
+    if (! html || mustKillCache) {
+      if (mustKillCache)
+        log("cache kill: "+absoluteUrl);
+      else
+        log("cache miss: "+absoluteUrl);
+
       fetch(absoluteUrl, function(html) {
         cacheStore(urlPath, html, function(err) {
           serve(html, response, cb);
@@ -142,7 +148,7 @@ var serverHandler = function(request, response) {
   time('request '+urlPath);
 
   if (cachePath) {
-    serveWithCache(urlPath, absoluteUrl, response, function() {
+    serveWithCache(urlPath, absoluteUrl, realUrl, response, function() {
       timeEnd('request '+urlPath);
     });
   }
