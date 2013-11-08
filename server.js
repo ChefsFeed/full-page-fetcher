@@ -88,35 +88,35 @@ var fetch = function(absoluteUrl, cb) {
 //region: cache
 
 function locationFor(urlPath, cb) {
-  var filepath = path.join(cachePath, urlPath).replace(/\/$/, '');
+  var fp = path.join(cachePath, urlPath);
+  fp = fp.replace(/\/$/, '');
+  fp += '.html';
 
-  fs.stat(filepath, function(err, info) {
-    if (info && info.isDirectory())
-      filepath += '/index'
-
-    return cb(null, filepath);
-  });
+  return fp;
 }
 
 function cacheLookup(urlPath, cb) {
-  locationFor(urlPath, function(err, filepath) {
-    fs.stat(filepath, function(err, exists) {
-      if (exists)
-        return fs.readFile(filepath, function(err, content) {
-          return cb(err, content, filepath);
-        });
-      else
-        return cb(err, null, filepath);
-    });
+  filepath = locationFor(urlPath);
+
+  fs.stat(filepath, function(err, exists) {
+    if (exists)
+      return fs.readFile(filepath, function(err, content) {
+        return cb(null, content, filepath);
+      });
+    else
+      return cb(null, null, filepath);
   });
 }
 
 function cacheStore(urlPath, html, cb) {
-  locationFor(urlPath, function(err, filepath) {
-    mkdir_p_for_file(filepath, function(err) {
-      log('cache: storing '+filepath);
-      return fs.writeFile(filepath, html, cb);
-    });
+  filepath = locationFor(urlPath);
+
+  mkdir_p_for_file(filepath, function(err) {
+    console.log(err);
+    if (err) return cb(err);
+
+    log('cache: storing '+filepath);
+    return fs.writeFile(filepath, html, cb);
   });
 }
 
@@ -132,11 +132,14 @@ function serveWithCache(urlPath, absoluteUrl, realUrl, response, cb) {
   var mustKillCache = realUrl.indexOf('kill_cache=true') > 0;
 
   cacheLookup(urlPath, function(err, html, cachePath) {
+    if (err) {
+      log("ERROR: "+err.toString());
+      return serve('', response, cb);
+    }
+
     if (! html || mustKillCache) {
-      if (mustKillCache)
-        log("cache kill: "+cachePath);
-      else
-        log("cache miss: "+cachePath);
+      var action = mustKillCache ? 'kill' : 'miss';
+      log('cache '+action+': '+cachePath);
 
       fetch(absoluteUrl, function(html) {
         cacheStore(urlPath, html, function(err) {
@@ -145,7 +148,7 @@ function serveWithCache(urlPath, absoluteUrl, realUrl, response, cb) {
       });
     }
     else {
-      log("cache hit: "+absoluteUrl);
+      log("cache hit: "+cachePath);
       serve(html, response, cb);
     }
   });
