@@ -29,18 +29,19 @@ var logConsoleMessage = function(msg, lineNum, sourceId) {
 };
 
 var renderHtml = function(url, cb) {
-  phantom.create(function(err, ph) {
+  phantom.create(function(err, phantomInstance) {
+    var ph = phantomInstance;
     ph.createPage(function(err, page){
       page.onConsoleMessage = logConsoleMessage;
       page.open(url, function(err, status){
-        //on errors, stop here
-        if (err) return cb(err);
+        if (err) return cb(err);  //on errors, stop here
 
         setTimeout(function() {
-          if (err)
-            cb(err);
-          else
-            page.get('content',function(err,content){ cb(null, content) });
+          if (err) return cb(err);  //on errors, stop here
+
+          page.get('content', function(err, content) {
+            return cb(null, content)
+          });
         }, timeOut);
       });
     });
