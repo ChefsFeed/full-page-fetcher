@@ -40,6 +40,7 @@ var renderHtml = function(url, cb) {
           if (err) return cb(err);  //on errors, stop here
 
           page.get('content', function(err, content) {
+            ph.exit();
             return cb(null, content)
           });
         }, timeOut);
