@@ -7,7 +7,6 @@
     "url": "git://github.com/lucasefe/full-page-fetcher.git"
   },
   "dependencies": {
-    "phantom": "*",
     "node-phantom": "*"
   },
   "devDependencies": {},
