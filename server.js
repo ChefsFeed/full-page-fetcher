@@ -88,7 +88,10 @@ var fetch = function(absoluteUrl, cb) {
 //region: cache
 
 function locationFor(urlPath) {
-  return path.join(cachePath, urlPath);
+  var filepath = path.join(cachePath, urlPath);
+  if (filepath[filepath.length - 1] == '/')
+    filepath += 'index';
+  return filepath;
 }
 
 function cacheLookup(urlPath, cb) {
