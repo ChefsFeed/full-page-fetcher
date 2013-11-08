@@ -33,16 +33,19 @@ var logConsoleMessage = function(msg, lineNum, sourceId) {
 };
 
 function log(message) {
+  sys.puts(message);
+}
+
+function logBreak(message) {
   sys.puts("---- "+message);
 }
 
-
 function time(label) {
-  console.time("---- "+label);
+  console.time(label);
 }
 
 function timeEnd(label) {
-  console.timeEnd("---- "+label);
+  console.timeEnd(label);
 }
 
 function exec(command, cb) {
@@ -63,7 +66,7 @@ var fetch = function(absoluteUrl, cb) {
 
   log("fetching: " + absoluteUrl);
 
-  time('fetch '+absoluteUrl);
+  time('fetch');
   phantom.create(function(err, phantomInstance) {
     var ph = phantomInstance;
     ph.createPage(function(err, page){
@@ -71,7 +74,7 @@ var fetch = function(absoluteUrl, cb) {
       page.open(absoluteUrl, function(err, status){
         setTimeout(function() {
           page.get('content',function(err,content){
-            timeEnd('fetch '+absoluteUrl);
+            timeEnd('fetch');
             return cb(content);
           });
         }, timeOut);
@@ -142,20 +145,24 @@ function serveWithCache(urlPath, absoluteUrl, realUrl, response, cb) {
 var serverHandler = function(request, response) {
   var startTime = Date.now();
 
-  var urlPath = url.parse(request.url, true).pathname;
+  var realUrl = request.url;
+  var urlPath = url.parse(realUrl, true).pathname;
   var absoluteUrl = url.resolve(baseUrl, urlPath);
 
-  time('request '+urlPath);
+  logBreak('begin request for '+urlPath);
+  time('outer request');
 
   if (cachePath) {
     serveWithCache(urlPath, absoluteUrl, realUrl, response, function() {
-      timeEnd('request '+urlPath);
+      timeEnd('outer request');
+      logBreak('end request for '+urlPath);
     });
   }
   else
     fetch(absoluteUrl, function(html) {
       serve(html, response, function() {
-        timeEnd('request '+urlPath);
+        timeEnd('outer request');
+        logBreak('end request for '+urlPath);
       });
     });
 };
