@@ -102,9 +102,11 @@ function cacheLookup(urlPath, cb) {
   locationFor(urlPath, function(err, filepath) {
     fs.stat(filepath, function(err, exists) {
       if (exists)
-        return fs.readFile(filepath, cb);
+        return fs.readFile(filepath, function(err, content) {
+          return cb(err, content, filepath);
+        });
       else
-        return cb();
+        return cb(err, null, filepath);
     });
   });
 }
@@ -129,12 +131,12 @@ function serve(html, response, cb) {
 function serveWithCache(urlPath, absoluteUrl, realUrl, response, cb) {
   var mustKillCache = realUrl.indexOf('kill_cache=true') > 0;
 
-  cacheLookup(urlPath, function(err, html) {
+  cacheLookup(urlPath, function(err, html, cachePath) {
     if (! html || mustKillCache) {
       if (mustKillCache)
-        log("cache kill: "+absoluteUrl);
+        log("cache kill: "+cachePath);
       else
-        log("cache miss: "+absoluteUrl);
+        log("cache miss: "+cachePath);
 
       fetch(absoluteUrl, function(html) {
         cacheStore(urlPath, html, function(err) {
