@@ -1,6 +1,8 @@
 var sys = require("util"),
     url = require("url"),
+    child_process = require("child_process"),
     path = require("path"),
+    fs = require("fs"),
     http = require("http"),
     phantom = require('node-phantom');
 
@@ -12,7 +14,9 @@ var hostname =   getParam('FPF_HOSTNAME') || '127.0.0.1';
 var port =    getIntParam('FPF_PORT') || 26000;
 var timeOut = getIntParam('FPF_TIMEOUT_MS') || 10000;
 var baseUrl =    getParam('FPF_BASE_URL') || 'http://www.google.com/';
+var cachePath = getParam('FPF_CACHE_PATH');
 
+//region: logging & misc
 
 var phantomOptions = {
   parameters: {
@@ -28,34 +32,131 @@ var logConsoleMessage = function(msg, lineNum, sourceId) {
   console.log(logLine);
 };
 
-var renderHtml = function(url, cb) {
+function log(message) {
+  sys.puts("---- "+message);
+}
+
+
+function time(label) {
+  console.time("---- "+label);
+}
+
+function timeEnd(label) {
+  console.timeEnd("---- "+label);
+}
+
+function exec(command, cb) {
+  child_process.exec(command, cb);
+}
+
+function mkdir_p_for_file(filepath, cb) {
+  var command = 'mkdir -p `dirname '+filepath+'`';
+  child_process.exec(command, cb);
+}
+
+//endregion
+
+//region: fetch from Ramen
+
+var fetch = function(absoluteUrl, cb) {
+  var startTime = Date.now();
+
+  log("fetching: " + absoluteUrl);
+
+  time('fetch '+absoluteUrl);
   phantom.create(function(err, phantomInstance) {
     var ph = phantomInstance;
     ph.createPage(function(err, page){
       page.onConsoleMessage = logConsoleMessage;
-      page.open(url, function(err, status){
+      page.open(absoluteUrl, function(err, status){
         setTimeout(function() {
-          page.get('content',function(err,content){ cb(content) });
+          page.get('content',function(err,content){
+            timeEnd('fetch '+absoluteUrl);
+            return cb(content);
+          });
         }, timeOut);
       });
     });
   }, phantomOptions);
 };
 
-var serverHandler = function(request, response) {
-  var page = url.parse(request.url, true).pathname;
-  var targetUrl = url.resolve(baseUrl, page);
+//endregion
 
-  sys.puts("---- fetching: " + targetUrl);
+//region: cache
 
-  response.writeHead(200, {"Content-Type": "text/html"});
-  renderHtml(targetUrl, function(html) {
-    response.write(html);
-    response.end();
+function locationFor(urlPath) {
+  return path.join(cachePath, urlPath);
+}
+
+function cacheLookup(urlPath, cb) {
+  var filepath = locationFor(urlPath);
+  fs.stat(filepath, function(err, exists) {
+    if (exists)
+      return fs.readFile(filepath, cb);
+    else
+      return cb();
   });
+}
+
+function cacheStore(urlPath, html, cb) {
+  var filepath = locationFor(urlPath);
+  mkdir_p_for_file(filepath, function(err) {
+    log('cache: storing '+filepath);
+    return fs.writeFile(filepath, html, cb);
+  });
+}
+
+function serve(html, response, cb) {
+  response.writeHead(200, {"Content-Type": "text/html"});
+  response.write(html);
+  response.end();
+
+  if (cb) return cb();
+}
+
+function serveWithCache(urlPath, absoluteUrl, response, cb) {
+  cacheLookup(urlPath, function(err, html) {
+    if (! html) {
+      log("cache miss: "+absoluteUrl);
+      fetch(absoluteUrl, function(html) {
+        cacheStore(urlPath, html, function(err) {
+          serve(html, response, cb);
+        });
+      });
+    }
+    else {
+      log("cache hit: "+absoluteUrl);
+      serve(html, response, cb);
+    }
+  });
+}
+
+//endregion
+
+var serverHandler = function(request, response) {
+  var startTime = Date.now();
+
+  var urlPath = url.parse(request.url, true).pathname;
+  var absoluteUrl = url.resolve(baseUrl, urlPath);
+
+  time('request '+urlPath);
+
+  if (cachePath) {
+    serveWithCache(urlPath, absoluteUrl, response, function() {
+      timeEnd('request '+urlPath);
+    });
+  }
+  else
+    fetch(absoluteUrl, function(html) {
+      serve(html, response, function() {
+        timeEnd('request '+urlPath);
+      });
+    });
 };
 
 var server = http.createServer(serverHandler);
 server.listen(port, hostname);
-sys.puts("Server running at http://"+hostname+":"+port+"/ - baseUrl: "+baseUrl);
+log("Server running at http://"+hostname+":"+port+"/ - baseUrl: "+baseUrl);
+
+//vim: set foldmarker=//region:,//endregion foldmethod=marker
 
