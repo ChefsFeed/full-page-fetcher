@@ -51,6 +51,7 @@ var serverHandler = function(request, response) {
 
   sys.puts("---- fetching: " + targetUrl);
 
+  response.writeHead(200, {"Content-Type": "text/html"});
   renderHtml(targetUrl, function(err, html) {
     if (err) {
       //hide it under the carpet
@@ -64,7 +65,6 @@ var serverHandler = function(request, response) {
       return exit(1);
     }
     else {
-      response.writeHead(200, {"Content-Type": "text/html"});
       response.write(html);
       response.end();
     }
