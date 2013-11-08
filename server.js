@@ -87,28 +87,34 @@ var fetch = function(absoluteUrl, cb) {
 
 //region: cache
 
-function locationFor(urlPath) {
-  var filepath = path.join(cachePath, urlPath);
-  if (filepath[filepath.length - 1] == '/')
-    filepath += 'index';
-  return filepath;
+function locationFor(urlPath, cb) {
+  var filepath = path.join(cachePath, urlPath).replace(/\/$/, '');
+
+  fs.stat(filepath, function(err, info) {
+    if (info && info.isDirectory())
+      filepath += '/index'
+
+    return cb(null, filepath);
+  });
 }
 
 function cacheLookup(urlPath, cb) {
-  var filepath = locationFor(urlPath);
-  fs.stat(filepath, function(err, exists) {
-    if (exists)
-      return fs.readFile(filepath, cb);
-    else
-      return cb();
+  locationFor(urlPath, function(err, filepath) {
+    fs.stat(filepath, function(err, exists) {
+      if (exists)
+        return fs.readFile(filepath, cb);
+      else
+        return cb();
+    });
   });
 }
 
 function cacheStore(urlPath, html, cb) {
-  var filepath = locationFor(urlPath);
-  mkdir_p_for_file(filepath, function(err) {
-    log('cache: storing '+filepath);
-    return fs.writeFile(filepath, html, cb);
+  locationFor(urlPath, function(err, filepath) {
+    mkdir_p_for_file(filepath, function(err) {
+      log('cache: storing '+filepath);
+      return fs.writeFile(filepath, html, cb);
+    });
   });
 }
 
