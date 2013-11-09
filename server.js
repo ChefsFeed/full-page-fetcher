@@ -57,6 +57,10 @@ function mkdir_p_for_file(filepath, cb) {
   child_process.exec(command, cb);
 }
 
+function rand() {
+  return Math.floor((Math.random()*10000)+1).toString();
+}
+
 //endregion
 
 //region: fetch from Ramen
@@ -64,9 +68,10 @@ function mkdir_p_for_file(filepath, cb) {
 var fetch = function(absoluteUrl, cb) {
   var startTime = Date.now();
 
+  var label = 'fetch '+rand();
+  time(label);
   log("fetching: " + absoluteUrl);
 
-  time('fetch');
   phantom.create(function(err, phantomInstance) {
     var ph = phantomInstance;
     ph.createPage(function(err, page){
@@ -74,7 +79,7 @@ var fetch = function(absoluteUrl, cb) {
       page.open(absoluteUrl, function(err, status){
         setTimeout(function() {
           page.get('content',function(err,content){
-            timeEnd('fetch');
+            timeEnd(label);
             ph.exit();
             return cb(content);
           });
@@ -163,19 +168,20 @@ var serverHandler = function(request, response) {
   var urlPath = url.parse(realUrl, true).pathname;
   var absoluteUrl = url.resolve(baseUrl, urlPath);
 
+  var requestId = 'outer request '+rand();
+  time(requestId);
   logBreak('begin request for '+urlPath);
-  time('outer request');
 
   if (cachePath) {
     serveWithCache(urlPath, absoluteUrl, realUrl, response, function() {
-      timeEnd('outer request');
+      timeEnd(requestId);
       logBreak('end request for '+urlPath);
     });
   }
   else
     fetch(absoluteUrl, function(html) {
       serve(html, response, function() {
-        timeEnd('outer request');
+        timeEnd(requestId);
         logBreak('end request for '+urlPath);
       });
     });
