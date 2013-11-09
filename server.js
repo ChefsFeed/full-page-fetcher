@@ -96,7 +96,7 @@ function locationFor(urlPath, cb) {
 }
 
 function cacheLookup(urlPath, cb) {
-  filepath = locationFor(urlPath);
+  var filepath = locationFor(urlPath);
 
   fs.stat(filepath, function(err, exists) {
     if (exists)
@@ -109,7 +109,7 @@ function cacheLookup(urlPath, cb) {
 }
 
 function cacheStore(urlPath, html, cb) {
-  filepath = locationFor(urlPath);
+  var filepath = locationFor(urlPath);
 
   mkdir_p_for_file(filepath, function(err) {
     if (err) return cb(err);
