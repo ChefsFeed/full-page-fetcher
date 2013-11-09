@@ -75,6 +75,7 @@ var fetch = function(absoluteUrl, cb) {
         setTimeout(function() {
           page.get('content',function(err,content){
             timeEnd('fetch');
+            ph.exit();
             return cb(content);
           });
         }, timeOut);
