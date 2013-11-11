@@ -14,7 +14,9 @@ var hostname =   getParam('FPF_HOSTNAME') || '127.0.0.1';
 var port =    getIntParam('FPF_PORT') || 26000;
 var timeOut = getIntParam('FPF_TIMEOUT_MS') || 10000;
 var baseUrl =    getParam('FPF_BASE_URL') || 'http://www.google.com/';
-var cachePath = getParam('FPF_CACHE_PATH');
+
+//optionally, use disk caching in this path (based on URL path; DOES NOT expire, must be done manually)
+var cachePath =  getParam('FPF_CACHE_PATH');
 
 //region: logging & misc
 
