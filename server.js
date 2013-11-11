@@ -113,7 +113,7 @@ var waitForSelector = function (page, selector, timeout, callbackFn) {
 
   //if evaluate succeeds, invokes callback w/ true, if timeout,
   // invokes w/ false, otherwise just exits
-  testForSelector = function () {
+  var testForSelector = function () {
     var elapsedTime = Date.now() - startTime;
 
     if (elapsedTime > timeout)
