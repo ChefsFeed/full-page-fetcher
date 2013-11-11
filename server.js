@@ -18,6 +18,9 @@ var baseUrl =    getParam('FPF_BASE_URL') || 'http://www.google.com/';
 //optionally, use disk caching in this path (based on URL path; DOES NOT expire, must be done manually)
 var cachePath =  getParam('FPF_CACHE_PATH');
 
+//optionally, poll for this CSS selector and finish as soon as it matches any element
+var selector =   getParam('FPF_WAIT_FOR_SELECTOR');
+
 //region: logging & misc
 
 var phantomOptions = {
@@ -79,17 +82,59 @@ var fetch = function(absoluteUrl, cb) {
     ph.createPage(function(err, page){
       page.onConsoleMessage = logConsoleMessage;
       page.open(absoluteUrl, function(err, status){
-        setTimeout(function() {
-          page.get('content',function(err,content){
-            timeEnd(label);
-            ph.exit();
-            return cb(content);
+        //if a CSS selector was configured, wait until it appears or until the timeout
+        if (selector) {
+          waitForSelector(page, selector, timeOut, function () {
+            page.get('content', function(err, content) {
+              ph.exit();
+              return cb(content);
+            });
           });
-        }, timeOut);
+        }
+        //otherwise, fixed wait until timeout
+        else {
+          setTimeout(function() {
+            page.get('content', function(err, content) {
+              ph.exit();
+              return cb(content);
+            });
+          }, timeOut);
+        }
       });
     });
   }, phantomOptions);
 };
+
+//borrowed from phantom-proxy
+var waitForSelector = function (page, selector, timeout, callbackFn) {
+  var startTime = Date.now(),
+    timeoutInterval = 150,
+    timeout = timeout || 10000;
+
+  //if evaluate succeeds, invokes callback w/ true, if timeout,
+  // invokes w/ false, otherwise just exits
+  testForSelector = function () {
+    var elapsedTime = Date.now() - startTime;
+
+    if (elapsedTime > timeout)
+      return callbackFn(false);
+
+    page.evaluate(
+      function (selector) {
+        return document.querySelector(selector);
+      },
+      function (err, selectorMatches) {
+        if (selectorMatches) {
+          console.log('selector matched: '+selectorMatches.outerHTML);
+          callbackFn(true);
+        }
+        else
+          setTimeout(testForSelector, timeoutInterval);
+      }, selector);
+  };
+
+  setTimeout(testForSelector, timeoutInterval);
+}
 
 //endregion
 
