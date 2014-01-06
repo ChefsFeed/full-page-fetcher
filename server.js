@@ -9,11 +9,13 @@ var sys = require("util"),
 
 function getParam(env_name) { return process.env[env_name]; }
 function getIntParam(env_name) { return process.env[env_name] ? parseInt(process.env[env_name]) : undefined; }
+function getBoolParam(env_name) { return process.env[env_name] == 'true'; }
 
 var hostname =   getParam('FPF_HOSTNAME') || '127.0.0.1';
 var port =    getIntParam('FPF_PORT') || 26000;
 var timeOut = getIntParam('FPF_TIMEOUT_MS') || 10000;
 var baseUrl =    getParam('FPF_BASE_URL') || 'http://www.google.com/';
+var debug =  getBoolParam('FPF_DEBUG') || false;
 var concurrency = getIntParam('FPF_CONCURRENCY') || 6;
 
 //optionally, use disk caching in this path (based on URL path; DOES NOT expire, must be done manually)
@@ -80,6 +82,7 @@ var pending = [];
 function process_pending() {
   if (pending.length > 0) {
     var doWork = pending.shift();
+    log('-- starting request with '+currentClients+' other concurrent requests');
     currentClients++;
     doWork(function() {
       currentClients--;
@@ -90,6 +93,7 @@ function process_pending() {
 
 function client_limit(doWork) {
   if (currentClients < maxClients) {
+    log('-- starting request with '+currentClients+' other concurrent requests');
     currentClients++;
     doWork(function() {
       currentClients--;
@@ -123,16 +127,30 @@ var realFetch = function(absoluteUrl, cb) {
   time(label);
   log("fetching: " + absoluteUrl);
 
+  function debugLog(message) {
+    if (!debug) return;
+    log("DEBUG req "+label+" - "+(Date.now() - startTime)+"ms - "+message);
+  }
+
+  debugLog('creating Phantom object...');
   phantom.create(function(err, phantomInstance) {
     var ph = phantomInstance;
+    debugLog('Phantom object created');
+    debugLog('creating Phantom page object...');
     ph.createPage(function(err, page){
+      debugLog('Phantom page object created');
       page.onConsoleMessage = logConsoleMessage;
+      debugLog('Phantom opening page...');
       page.open(absoluteUrl, function(err, status){
         remainingTimeout = parseInt(timeOut - (Date.now() - startTime));
+        debugLog('Phantom page opened; remaining time for timeout: '+remainingTimeout+'ms');
         if (remainingTimeout <= 0) remainingTimeout = 1;
+
         //if a CSS selector was configured, wait until it appears or until the timeout
         if (selector) {
+          debugLog('Doing waitForSelector...');
           waitForSelector(page, selector, remainingTimeout, function (selectorMatched) {
+            debugLog('wait over; reason: '+(selectorMatched ? 'selector matched' : 'timeout waiting for selector match'));
             page.get('content', function(err, content) {
               ph.exit();
               return cb(content);
@@ -141,7 +159,9 @@ var realFetch = function(absoluteUrl, cb) {
         }
         //otherwise, fixed wait until timeout
         else {
+          debugLog('Setting fixed timeout of '+remainingTimeout+'ms');
           setTimeout(function() {
+            debugLog('Timeout reached');
             page.get('content', function(err, content) {
               ph.exit();
               return cb(content);
