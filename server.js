@@ -235,8 +235,12 @@ var serverHandler = function(request, response) {
 };
 
 var server = http.createServer(serverHandler);
-server.listen(port, hostname);
-log("Server running at http://"+hostname+":"+port+"/ - baseUrl: "+baseUrl);
+
+//before starting, clean up phantomjs processes
+exec('killall -9 phantomjs', function() {
+  server.listen(port, hostname);
+  log("Server running at http://"+hostname+":"+port+"/ - baseUrl: "+baseUrl);
+});
 
 //vim: set foldmarker=//region:,//endregion foldmethod=marker
 
