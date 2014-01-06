@@ -82,7 +82,7 @@ var pending = [];
 function process_pending() {
   if (pending.length > 0) {
     var doWork = pending.shift();
-    log('-- starting request with '+currentClients+' other concurrent requests');
+    log('-- starting fetch with '+currentClients+' other concurrent fetches; queue length: '+pending.length);
     currentClients++;
     doWork(function() {
       currentClients--;
@@ -93,7 +93,7 @@ function process_pending() {
 
 function client_limit(doWork) {
   if (currentClients < maxClients) {
-    log('-- starting request with '+currentClients+' other concurrent requests');
+    log('-- starting fetch with '+currentClients+' other concurrent fetches; queue length: '+pending.length);
     currentClients++;
     doWork(function() {
       currentClients--;
@@ -102,7 +102,7 @@ function client_limit(doWork) {
   }
   else {
     pending.push(doWork);
-    log('-- max concurrency of '+concurrency+' reached; pending requests: '+pending.length);
+    log('-- max fetch concurrency of '+concurrency+' reached; pending: '+pending.length);
   }
 }
 
