@@ -14,6 +14,7 @@ var hostname =   getParam('FPF_HOSTNAME') || '127.0.0.1';
 var port =    getIntParam('FPF_PORT') || 26000;
 var timeOut = getIntParam('FPF_TIMEOUT_MS') || 10000;
 var baseUrl =    getParam('FPF_BASE_URL') || 'http://www.google.com/';
+var concurrency = getIntParam('FPF_CONCURRENCY') || 6;
 
 //optionally, use disk caching in this path (based on URL path; DOES NOT expire, must be done manually)
 var cachePath =  getParam('FPF_CACHE_PATH');
@@ -68,10 +69,55 @@ function rand() {
 
 //endregion
 
+//region: async queue with capped concurrency
+
+//source: https://journal.paul.querna.org/articles/2010/09/04/limiting-concurrency-node-js/
+
+var maxClients = concurrency;
+var currentClients = 0;
+var pending = [];
+
+function process_pending() {
+  if (pending.length > 0) {
+    var doWork = pending.shift();
+    currentClients++;
+    doWork(function() {
+      currentClients--;
+      process.nextTick(process_pending);
+    });
+  }
+}
+
+function client_limit(doWork) {
+  if (currentClients < maxClients) {
+    currentClients++;
+    doWork(function() {
+      currentClients--;
+      process.nextTick(process_pending);
+    });
+  }
+  else {
+    pending.push(doWork);
+    log('-- max concurrency of '+concurrency+' reached; pending requests: '+pending.length);
+  }
+}
+
+//endregion
+
 //region: fetch from Ramen
 
 var fetch = function(absoluteUrl, cb) {
+  client_limit(function(done) {
+    realFetch(absoluteUrl, function(content) {
+      done();
+      cb(content);
+    });
+  });
+}
+
+var realFetch = function(absoluteUrl, cb) {
   var startTime = Date.now();
+  var remainingTimeout = 0;
 
   var label = 'fetch '+rand();
   time(label);
@@ -82,9 +128,11 @@ var fetch = function(absoluteUrl, cb) {
     ph.createPage(function(err, page){
       page.onConsoleMessage = logConsoleMessage;
       page.open(absoluteUrl, function(err, status){
+        remainingTimeout = parseInt(timeOut - (Date.now() - startTime));
+        if (remainingTimeout <= 0) remainingTimeout = 1;
         //if a CSS selector was configured, wait until it appears or until the timeout
         if (selector) {
-          waitForSelector(page, selector, timeOut, function () {
+          waitForSelector(page, selector, remainingTimeout, function (selectorMatched) {
             page.get('content', function(err, content) {
               ph.exit();
               return cb(content);
@@ -98,7 +146,7 @@ var fetch = function(absoluteUrl, cb) {
               ph.exit();
               return cb(content);
             });
-          }, timeOut);
+          }, remainingTimeout);
         }
       });
     });
@@ -108,8 +156,7 @@ var fetch = function(absoluteUrl, cb) {
 //borrowed from phantom-proxy
 var waitForSelector = function (page, selector, timeout, callbackFn) {
   var startTime = Date.now(),
-    timeoutInterval = 150,
-    timeout = timeout || 10000;
+    timeoutInterval = 150;
 
   //if evaluate succeeds, invokes callback w/ true, if timeout,
   // invokes w/ false, otherwise just exits
