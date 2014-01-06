@@ -143,14 +143,14 @@ var realFetch = function(absoluteUrl, cb) {
       debugLog('Phantom opening page...');
       page.open(absoluteUrl, function(err, status){
         remainingTimeout = parseInt(timeOut - (Date.now() - startTime));
-        debugLog('Phantom page opened; remaining time for timeout: '+remainingTimeout+'ms');
-        if (remainingTimeout <= 0) remainingTimeout = 1;
+        debugLog('Phantom page opened');
 
         //if a CSS selector was configured, wait until it appears or until the timeout
         if (selector) {
-          debugLog('Doing waitForSelector...');
-          waitForSelector(page, selector, remainingTimeout, function (selectorMatched) {
-            debugLog('wait over; reason: '+(selectorMatched ? 'selector matched' : 'timeout waiting for selector match'));
+          var waitStart = Date.now();
+          debugLog('Doing waitForSelector with timeout of '+timeOut+'...');
+          waitForSelector(page, selector, timeOut, function (selectorMatched) {
+            debugLog('wait over after '+(Date.now()-waitStart)+'ms; reason: '+(selectorMatched ? 'selector matched' : 'timeout waiting for selector match'));
             page.get('content', function(err, content) {
               ph.exit();
               return cb(content);
@@ -159,14 +159,14 @@ var realFetch = function(absoluteUrl, cb) {
         }
         //otherwise, fixed wait until timeout
         else {
-          debugLog('Setting fixed timeout of '+remainingTimeout+'ms');
+          debugLog('Setting fixed timeout of '+timeOut+'ms');
           setTimeout(function() {
             debugLog('Timeout reached');
             page.get('content', function(err, content) {
               ph.exit();
               return cb(content);
             });
-          }, remainingTimeout);
+          }, timeOut);
         }
       });
     });
@@ -175,8 +175,8 @@ var realFetch = function(absoluteUrl, cb) {
 
 //borrowed from phantom-proxy
 var waitForSelector = function (page, selector, timeout, callbackFn) {
-  var startTime = Date.now(),
-    timeoutInterval = 150;
+  var startTime = Date.now();
+  var timeoutInterval = 150;
 
   //if evaluate succeeds, invokes callback w/ true, if timeout,
   // invokes w/ false, otherwise just exits
@@ -301,12 +301,14 @@ var serverHandler = function(request, response) {
     });
 };
 
-var server = http.createServer(serverHandler);
 
 //before starting, clean up phantomjs processes
 exec('killall -9 phantomjs', function() {
+
+  var server = http.createServer(serverHandler);
   server.listen(port, hostname);
   log("Server running at http://"+hostname+":"+port+"/ - baseUrl: "+baseUrl);
+
 });
 
 //vim: set foldmarker=//region:,//endregion foldmethod=marker
