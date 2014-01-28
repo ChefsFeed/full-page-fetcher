@@ -79,15 +79,17 @@ var maxClients = concurrency;
 var currentClients = 0;
 var pending = [];
 
+function finish_current() {
+  currentClients--;
+  process.nextTick(process_pending);
+}
+
 function process_pending() {
   if (pending.length > 0) {
     var doWork = pending.shift();
     log('-- starting fetch with '+currentClients+' other concurrent fetches; queue length: '+pending.length);
     currentClients++;
-    doWork(function() {
-      currentClients--;
-      process.nextTick(process_pending);
-    });
+    doWork(finish_current);
   }
 }
 
@@ -95,10 +97,7 @@ function client_limit(doWork) {
   if (currentClients < maxClients) {
     log('-- starting fetch with '+currentClients+' other concurrent fetches; queue length: '+pending.length);
     currentClients++;
-    doWork(function() {
-      currentClients--;
-      process.nextTick(process_pending);
-    });
+    doWork(finish_current);
   }
   else {
     pending.push(doWork);
@@ -112,7 +111,16 @@ function client_limit(doWork) {
 
 var fetch = function(absoluteUrl, cb) {
   client_limit(function(done) {
+    // 10 secs after the configured timeout, mark as done (in case things get stuck)
+    var maxWait = timeOut + 10000;
+    var cancelTimer = setTimeout(
+      function() {
+        log('-- ABORTING - max wait of '+maxWait+' reached');
+      }, maxWait);
+
     realFetch(absoluteUrl, function(content) {
+      clearTimeout(cancelTimer);
+
       done();
       cb(content);
     });
